@@ -81,7 +81,6 @@ void *client_thread_func(void *arg) {
             tx_cnt += 1;
         }
         if (epoll_wait(data->epoll_fd, events, MAX_EVENTS, 1000) <= 0){
-            //printf("packet lost\n");
             continue;
         }
         if (recv(data->socket_fd, recv_buf, MESSAGE_SIZE, 0) > -1){
@@ -157,7 +156,7 @@ void run_client() {
         total_messages += thread_data[i].total_messages;
         total_request_rate += thread_data[i].request_rate;
     }
-    printf("Total messages: %ld/%d\n", total_messages, num_client_threads * num_requests);
+    printf("Total messages recieved: %ld/%d\n", total_messages, num_client_threads * num_requests);
     printf("Average RTT: %lld us\n", total_rtt / total_messages);
     printf("Total Request Rate: %f messages/s\n", total_request_rate);
 }
@@ -186,32 +185,20 @@ void run_server() {
     epoll_ctl(e, EPOLL_CTL_ADD, s, &event);
 
     /* Server's run-to-completion event loop */
-    int num_events, bytes;
+    int bytes;
     while (1) {
         /*
          * Server uses epoll to handle connection establishment with clients
          * or receive the message from clients and echo the message back
          */
-        num_events = epoll_wait(e, events, MAX_EVENTS, -1);
+        epoll_wait(e, events, MAX_EVENTS, -1);
         char buf[MESSAGE_SIZE];
         bytes = recvfrom(events[0].data.fd, buf, MESSAGE_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
         if (bytes > 0){
             sendto(events[0].data.fd, buf, bytes, 0, (struct sockaddr *)&client_addr, client_addr_len);
         }else{
-            printf("test1\n");
             close(events[0].data.fd);
         }
-
-
-            // int num_events = epoll_wait(e, events, MAX_EVENTS, -1);
-            //     if (events[0].events & EPOLLIN) {
-            //         char buf[MESSAGE_SIZE];
-            //         int bytes = recvfrom(events[0].data.fd, buf, MESSAGE_SIZE, 0, (struct sockaddr *)&client_addr, &client_addr_len);
-            //         if (bytes > 0) {
-            //             printf("Received %d bytes from client\n", bytes);
-            //             sendto(events[0].data.fd, buf, bytes, 0, (struct sockaddr *)&client_addr, client_addr_len);
-            //         }
-            //     }
     }
 }
 
